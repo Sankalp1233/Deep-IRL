@@ -1,0 +1,418 @@
+from itertools import product
+import numpy as np
+# import matplot.pyplot as plt
+import numpy.random as rn
+# conda install theano
+import theano as th
+import theano.tensor as T
+import maxent
+import csv
+import collections
+import pickle
+from itertools import groupby
+import pandas as pd
+import pymc3 as pm
+# %matplotlib inline
+
+# with open('raw_data2.csv','r') as file:
+     # reader = csv.reader(file)
+# print(type(df))
+from itertools import accumulate
+# from pd import Dataframe
+df = pd.read_csv('raw_data2.csv')
+# for subject_nr,df in df.groupby('subject_nr'):
+    # print(df)
+m = 1
+list_new_variable3 = []
+while m<len(df['xpos_get_response']):
+      new_variable = df['xpos_get_response'][m].replace(',', '').replace('[','').replace(']','')
+      new_variable2 = df['ypos_get_response'][m].replace(',', '').replace('[','').replace(']','')
+      new_variable3 = df['subject_nr'][m]
+      new_list = new_variable.split()
+      len_new_list = len(new_list)
+      new_list2 = new_variable2.split()
+      last_index = len_new_list - 1
+      if m != 1:
+         first_list_new_variable = new_variable.split()
+         first_list_new_variable2 = new_variable2.split()
+         trajectories = [str(i)+','+str(j) for i,j in zip(first_list_new_variable, first_list_new_variable2)]
+         trajectories2 = ['('+ str(i)+','+' '+str(j)+')' for i,j in zip(first_list_new_variable, first_list_new_variable2)]
+         res = []
+         denominator = len(trajectories2) - 1
+         new_trajectories = []
+         diff_trajectories = []
+         for i in trajectories2: 
+             if i not in res: 
+                res.append(i)
+         matrix = {
+               k: {l: 0 for l in res}
+               for k in res
+         }
+         for i in range(denominator): 
+             # print(i)
+             if trajectories2[i] == trajectories2[i+1]:
+                matrix[trajectories2[i]][trajectories2[i+1]] += 1
+             elif trajectories2[i] != trajectories2[i+1]:
+                matrix[trajectories2[i]][trajectories2[i+1]] += 1
+         a_file = open("data.pkl", "wb")
+         pickle.dump(matrix, a_file)
+         a_file.close()
+         a_file = open("data.pkl", "rb")
+         output = pickle.load(a_file)
+         a_file.close()
+         list_new_variable += new_variable.split()
+         list_new_variable2 += new_variable2.split()
+         list_new_variable3.append(new_variable3)
+         len_new_list = len(list_new_variable)
+      else: 
+         list_new_variable = new_variable.split()
+         list_new_variable2 = new_variable2.split()
+         trajectories = [str(i)+','+' '+str(j) for i,j in zip(list_new_variable, list_new_variable2)]
+         trajectories2 = ['('+ str(i)+','+' '+str(j)+')' for i,j in zip(list_new_variable, list_new_variable2)]
+         new_trajectories = []
+         for i in trajectories: 
+             new_res = tuple(map(float, i.split(', '))) 
+             new_trajectories.append(new_res)
+         n_actions = len(new_trajectories)-1
+         number_of_trajectories = 1
+         length_of_trajectories = len(new_trajectories)
+         trajectories1 = np.array(new_trajectories)
+         new_trajectories2 = trajectories1.reshape(number_of_trajectories,length_of_trajectories,2)
+         new_counter = collections.Counter(new_trajectories)
+         new_df = pd.DataFrame.from_dict(new_counter, orient='index').reset_index()
+         new_df_count = new_df['index'].count()
+         res = []
+         for i in trajectories: 
+             if i not in res: 
+                res.append(i)
+         res2 = []
+         denominator2 = len(trajectories2) - 1
+         for i in trajectories2: 
+             if i not in res2: 
+                res2.append(i)
+         convert_res = []
+         for i in res:
+             new_res = tuple(map(float, i.split(', '))) 
+             convert_res.append(new_res)
+         convert_res_len = len(convert_res)
+         x_coordinates = [p[0] for p in convert_res]
+         y_coordinates = [p[1] for p in convert_res]
+         first_new_x_y_coordinates = [str(i)+','+' '+str(j-1) for i,j in zip(x_coordinates, y_coordinates)]
+         first_new_x_y_coordinates_converted = []
+         for i in first_new_x_y_coordinates:
+             new_res = tuple(map(float, i.split(', '))) 
+             first_new_x_y_coordinates_converted.append(new_res)
+         new_df['first_new_x_y_coordinates'] = first_new_x_y_coordinates_converted
+         first_new_x_coordinates = [p[0] for p in first_new_x_y_coordinates_converted]
+         first_new_y_coordinates = [p[1] for p in first_new_x_y_coordinates_converted]
+         second_new_x_y_coordinates = [str(i-.5)+','+' '+str(j+.5) for i,j in zip(x_coordinates, y_coordinates)]
+         second_new_x_y_coordinates_converted = []
+         for i in second_new_x_y_coordinates:
+             new_res = tuple(map(float, i.split(', '))) 
+             second_new_x_y_coordinates_converted.append(new_res)
+         new_df['second_new_x_y_coordinates'] = second_new_x_y_coordinates_converted
+         second_new_x_coordinates = [p[0] for p in second_new_x_y_coordinates_converted]
+         second_new_y_coordinates = [p[1] for p in second_new_x_y_coordinates_converted]
+         third_new_x_y_coordinates = [str(i+.5)+','+' '+str(j+.5) for i,j in zip(x_coordinates, y_coordinates)]
+         third_new_x_y_coordinates_converted = []
+         for i in third_new_x_y_coordinates:
+             new_res = tuple(map(float, i.split(', '))) 
+             third_new_x_y_coordinates_converted.append(new_res)
+         new_df['third_new_x_y_coordinates'] = third_new_x_y_coordinates_converted
+         third_new_x_coordinates = [p[0] for p in third_new_x_y_coordinates_converted]
+         third_new_y_coordinates = [p[1] for p in third_new_x_y_coordinates_converted]
+         new_ans_x_value = []
+         new_ans_y_value = []
+         for i in range(len(x_coordinates)):
+                  new_ans_x_value.append((x_coordinates[i] + first_new_x_coordinates[i] + second_new_x_coordinates[i] + third_new_x_coordinates[i])/4)
+                  new_ans_y_value.append((y_coordinates[i] + first_new_y_coordinates[i] + second_new_y_coordinates[i] + third_new_y_coordinates[i])/4)
+         newest_x_y_coordinates = [str(i)+','+' '+str(j) for i,j in zip(new_ans_x_value, new_ans_y_value )]
+         newest_x_y_coordinates_converted = []
+         for i in newest_x_y_coordinates:
+             new_res = tuple(map(float, i.split(', '))) 
+             newest_x_y_coordinates_converted.append(new_res)
+         new_df.columns = ['cell_id','number of visits', 'first_new_x_y_coordinates', 'second_new_x_y_coordinates', 'third_new_x_y_coordinates']
+         numOfRows = new_df.shape[0]
+         new_matrix = np.asmatrix(new_df)
+         # print(new_matrix)
+         matrix = {
+               k: {l: 0 for l in res2}
+               for k in res2
+         }
+         a_file = open("data.pkl", "wb")
+         pickle.dump(matrix, a_file)
+         a_file.close()
+         a_file = open("data.pkl", "rb")
+         output = pickle.load(a_file)
+         a_file.close()
+         new_trajectories = []
+         diff_trajectories = []
+         for i in range(denominator2): 
+             if trajectories2[i] == trajectories2[i+1]:
+                matrix[trajectories2[i]][trajectories2[i+1]] += (1/n_actions)
+             elif trajectories2[i] != trajectories2[i+1]:
+                matrix[trajectories2[i]][trajectories2[i+1]] += (1/n_actions)
+         # print(matrix)
+         for key in matrix.keys():
+             matrix[key] = list(matrix[key].values())
+         # print(matrix)
+         new_array = []
+         for value in matrix.values():
+             new_value = [value] * n_actions
+             new_array.append(new_value)
+             # print(type(value))
+             # print(value)
+         new_array = np.array(new_array)
+         transition_probability = new_array.reshape(convert_res_len,n_actions,convert_res_len)
+         FLOAT = th.config.floatX
+         def find_svf(n_states, trajectories):
+             svf = np.zeros(n_states)
+             for trajectory in trajectories:
+                 for state, _, _ in trajectory:
+                      svf[state] += 1
+             svf /= trajectories.shape[0]
+             return th.shared(svf, "svf", borrow=True)
+         def optimal_value(n_states, n_actions, transition_probabilities,reward,discount,threshold=1e-2):      
+             v = T.zeros(n_states, dtype=FLOAT)
+             def update(s, prev_diff, v, reward, tps):
+                 max_v = float("-inf")
+                 v_template = T.zeros_like(v)
+                 for a in range(n_actions):
+                     tp = tps[s, a, :]
+                     max_v = T.largest(max_v, T.dot(tp, reward + discount*v))
+                 new_diff = abs(v[s] - max_v)
+                 if T.lt(prev_diff, new_diff):
+                    diff = new_diff
+                 else:
+                    diff = prev_diff
+                 return (diff, T.set_subtensor(v_template[s], max_v)), {}
+             def until_converged(diff, v):
+                 (diff, vs), _ = th.scan(
+                         fn=update,
+                         outputs_info=[{"initial": diff, "taps": [-1]},
+                                       None],
+                         sequences=[T.arange(n_states)],
+                         non_sequences=[v, reward, transition_probabilities])
+                 return ((diff[-1], vs.sum(axis=0)), {},
+                         th.scan_module.until(diff[-1] < threshold))
+
+             (_, vs), _ = th.scan(fn = until_converged,
+                                  outputs_info=[
+                                     {"initial": getattr(np, FLOAT)(float("inf")),
+                                      "taps": [-1]},
+                                     {"initial": v,
+                                      "taps": [-1]}],
+                                  n_steps=1000)
+
+             return vs[-1]
+         def find_policy(n_states,n_actions,transition_probabilities,reward, 
+                          discount,threshold=1e-2,v=None):
+              if v is None:
+                 v = optimal_value(n_states, n_actions, transition_probabilities, reward,
+                              discount, threshold)
+              Q = T.zeros((n_states, n_actions))
+              def make_Q(i, j, tps, Q, reward, v):
+                  Q_template = T.zeros_like(Q)
+                  tp = transition_probabilities[i, j, :]
+                  return T.set_subtensor(Q_template[i, j], tp.dot(reward + discount*v)),{}
+              prod = np.array(list(product(range(n_states), range(n_actions))))
+              state_range = th.shared(prod[:, 0])
+              action_range = th.shared(prod[:, 1])
+              Qs, _ = th.scan(fn=make_Q,
+                              outputs_info=None,
+                              sequences=[state_range, action_range],
+                              non_sequences=[transition_probabilities, Q, reward, v])
+              Q = Qs.sum(axis=0)
+              Q -= Q.max(axis=1).reshape((n_states, 1))  # For numerical stability.
+              Q = T.exp(Q)/T.exp(Q).sum(axis=1).reshape((n_states, 1))
+              return Q
+         def find_expected_svf(n_states, r, n_actions, discount,
+                               transition_probability, trajectories):  
+             n_trajectories = trajectories.shape[0]
+             trajectory_length = trajectories.shape[1]
+             policy = find_policy(n_states, n_actions, transition_probability, r, discount)
+             print(policy)
+             start_state_count = T.extra_ops.bincount(trajectories[:, 0, 0],
+                                             minlength=n_states)
+             print(start_state_count)
+             p_start_state = start_state_count.astype(FLOAT)/n_trajectories
+             def state_visitation_step(i, j, prev_svf, policy, tps):
+                 svf = prev_svf[i] * policy[i, j] * tps[i, j, :]
+                 return svf, {}
+             prod = np.array(list(product(range(n_states), range(n_actions))))
+             state_range = th.shared(prod[:, 0])
+             action_range = th.shared(prod[:, 1])
+             def state_visitation_row(prev_svf, policy, tps, state_range, action_range):
+                 svf_t, _ = th.scan(fn=state_visitation_step,
+                           sequences=[state_range, action_range],
+                           non_sequences=[prev_svf, policy, tps])
+                 svf_t = svf_t.sum(axis=0)
+                 return svf_t, {}
+             svf, _ = th.scan(fn=state_visitation_row,
+                          outputs_info=[{"initial": p_start_state, "taps": [-1]}],
+                          n_steps=trajectories.shape[1]-1,
+                          non_sequences=[policy, transition_probability, state_range,
+                          action_range])
+             return svf.sum(axis=0) + p_start_state
+         def irl(structure, feature_matrix, n_actions, discount, transition_probability,
+             trajectories, epochs, learning_rate, initialisation="normal", l1=0.1,
+             l2=0.1):
+             n_states, d_states = feature_matrix.shape
+             n_states = int(n_states)
+             transition_probability = th.shared(transition_probability, borrow=True)
+             trajectories = th.shared(trajectories, borrow=True)
+             n_layers = len(structure)-1
+             weights = []
+             hist_w_grads = []  # For AdaGrad.
+             biases = []
+             hist_b_grads = []  # For AdaGrad.
+             for i in range(n_layers):
+                 shape = (structure[i+1], structure[i])
+                 if initialisation == "normal":
+                     matrix = th.shared(rn.normal(size=shape), name="W", borrow=True)
+                 else:
+                     matrix = th.shared(rn.uniform(size=shape), name="W", borrow=True)
+                 weights.append(matrix)
+                 hist_w_grads.append(th.shared(np.zeros(shape), name="hdW", borrow=True))
+                 shape = (structure[i+1], 1)
+                 if initialisation == "normal":
+                     matrix = th.shared(rn.normal(size=shape), name="b", borrow=True)
+                 else:
+                     matrix = th.shared(rn.uniform(size=shape), name="b", borrow=True)
+                 biases.append(matrix)
+                 hist_b_grads.append(th.shared(np.zeros(shape), name="hdb", borrow=True))
+             if initialisation == "normal":
+                 α = th.shared(rn.normal(size=(1, structure[-1])), name="alpha",
+                            borrow=True)
+             else:
+                 α = th.shared(rn.uniform(size=(1, structure[-1])), name="alpha",
+                            borrow=True)
+             hist_α_grad = T.zeros(α.shape)  # For AdaGrad.
+             adagrad_epsilon = 1e-6  # AdaGrad numerical stability.
+             s_feature_matrix = T.matrix("x")
+             φs = [s_feature_matrix.T]
+             for W, b in zip(weights, biases):
+                 φ = T.nnet.sigmoid(th.compile.ops.Rebroadcast((0, False), (1, True))(b)
+                                  + W.dot(φs[-1]))
+                 φs.append(φ)
+             r = α.dot(φs[-1]).reshape((n_states,))
+             r = (r - r.mean())/r.std()
+             expected_svf = find_expected_svf(n_states, r,
+                                           n_actions, discount,
+                                           transition_probability,
+                                           trajectories)
+             svf = maxent.find_svf(n_states, trajectories.get_value())
+             updates = []
+             α_grad = φs[-1].dot(svf - expected_svf).T
+             hist_α_grad += α_grad**2
+             adj_α_grad = α_grad/(adagrad_epsilon + T.sqrt(hist_α_grad))
+             updates.append((α, α + adj_α_grad*learning_rate))
+             def grad_for_state(s, theta, svf_diff, r):
+                 regularisation = abs(theta).sum()*l1 + (theta**2).sum()*l2
+                 return svf_diff[s] * T.grad(r[s], theta) - regularisation, {}
+             for i, W in enumerate(weights):
+                 w_grads, _ = th.scan(fn=grad_for_state,
+                                   sequences=[T.arange(n_states)],
+                                   non_sequences=[W, svf - expected_svf, r])
+                 w_grad = w_grads.sum(axis=0)
+                 hist_w_grads[i] += w_grad**2
+                 adj_w_grad = w_grad/(adagrad_epsilon + T.sqrt(hist_w_grads[i]))
+                 updates.append((W, W + adj_w_grad*learning_rate))
+             for i, b in enumerate(biases):
+                 b_grads, _ = th.scan(fn=grad_for_state,
+                             sequences=[T.arange(n_states)],
+                             non_sequences=[b, svf - expected_svf, r])
+                 b_grad = b_grads.sum(axis=0)
+                 hist_b_grads[i] += b_grad**2
+                 adj_b_grad = b_grad/(adagrad_epsilon + T.sqrt(hist_b_grads[i]))
+                 updates.append((b, b + adj_b_grad*learning_rate))
+             train = th.function([s_feature_matrix], updates=updates, outputs=r)
+             run = th.function([s_feature_matrix], outputs=r)
+             for e in range(epochs):
+                 reward = train(feature_matrix)
+             return reward.reshape((n_states,))
+      structure = (10,3,3)
+      epochs = 1
+      learning_rate = 0.5
+      discount = 0.5
+      # initialisation = "normal"
+      # l1 = 0.1
+      # l2 = 0.1
+      # print(new_trajectories2)
+      print(new_matrix.shape)
+      print(irl(structure, new_matrix, n_actions, discount,
+                 transition_probability,new_trajectories2, epochs,
+                 learning_rate,initialisation="normal",l1=0.1,l2=0.1))              
+      m += 2
+# to help with theano work below:
+import ayx
+from ayx import Alteryx
+import pymc3
+import numpy as np
+import matplot.pyplot as plt
+import pandas as pd
+import pymc3 as pm
+
+model = pm.Model()
+with model:
+    mu1 = pm.Normal("mu1", mu=0, sd=1, shape=10)
+with model:
+    step = pm.NUTS()
+    trace = pm.sample(2000, tune=1000, init=None, step=step, cores=4)
+     # WARNING (theano.configdefaults): g++ not available, if using conda: `conda install m2w64-toolchain`
+C:\Users\Sankalp Chauhan\AppData\Local\Programs\Python\Python37\lib\site-packages\theano\configdefaults.py:560: UserWarning: DeprecationWarning: there is no c++ compiler.This is deprecated and with Theano 0.11 a c++ compiler will be mandatory
+  warnings.warn("DeprecationWarning: there is no c++ compiler."
+WARNING (theano.configdefaults): g++ not detected ! Theano will be unable to execute optimized C-implementations (for both CPU and GPU) and will default to Python implementations. Performance will be severely degraded. To remove this warning, set Theano flags cxx to an empty string.
+WARNING (theano.tensor.blas): Using NumPy C-API based implementation for BLAS functions.
+(82, 5)
+Elemwise{true_div,no_inplace}.0
+Traceback (most recent call last):
+  File "ID_grouping.py", line 345, in <module>
+    learning_rate,initialisation="normal",l1=0.1,l2=0.1))
+  File "ID_grouping.py", line 303, in irl
+    trajectories)
+  File "ID_grouping.py", line 236, in find_expected_svf
+    minlength=n_states)
+  File "C:\Users\Sankalp Chauhan\AppData\Local\Programs\Python\Python37\lib\site-packages\theano\tensor\extra_ops.py", line 549, in bincount
+    out = theano.tensor.advanced_inc_subtensor1(out, 1, x)
+  File "C:\Users\Sankalp Chauhan\AppData\Local\Programs\Python\Python37\lib\site-packages\theano\gof\op.py", line 615, in __call__
+    node = self.make_node(*inputs, **kwargs)
+  File "C:\Users\Sankalp Chauhan\AppData\Local\Programs\Python\Python37\lib\site-packages\theano\tensor\subtensor.py", line 1922, in make_node
+    raise TypeError('index must be integers')
+TypeError: index must be integers
+
+#c++ compilier
+import ayx
+from ayx import Alteryx
+import pymc3
+import numpy as np
+import matplot.pyplot as plt
+import pandas as pd
+import pymc3 as pm
+
+#model used for c++ compilier warining
+model = pm.Model()
+with model:
+    mu1 = pm.Normal("mu1", mu=0, sd=1, shape=10)
+with model:
+    step = pm.NUTS()
+    trace = pm.sample(2000, tune=1000, init=None, step=step, cores=4)
+
+Traceback (most recent call last):
+  File "c++compilier.py", line 2, in <module>
+    from ayx import Alteryx
+  File "C:\Users\Sankalp Chauhan\Desktop\Sonny\InternFall2020\pythontool-ayx-package-master\pythontool-ayx-package-master\ayx\Alteryx.py", line 14, in <module>
+    from ayx.export import (
+  File "C:\Users\Sankalp Chauhan\Desktop\Sonny\InternFall2020\pythontool-ayx-package-master\pythontool-ayx-package-master\ayx\export.py", line 14, in <module>
+    from ayx.CachedData import CachedData as __CachedData__
+  File "C:\Users\Sankalp Chauhan\Desktop\Sonny\InternFall2020\pythontool-ayx-package-master\pythontool-ayx-package-master\ayx\CachedData.py", line 19, in <module>
+    from ayx.DatastreamUtils import MetadataTools, Config, savePlotToFile
+  File "C:\Users\Sankalp Chauhan\Desktop\Sonny\InternFall2020\pythontool-ayx-package-master\pythontool-ayx-package-master\ayx\DatastreamUtils.py", line 24, in <module>
+    from ayx.Datafiles import FileFormat
+  File "C:\Users\Sankalp Chauhan\Desktop\Sonny\InternFall2020\pythontool-ayx-package-master\pythontool-ayx-package-master\ayx\Datafiles.py", line 20, in <module>
+    from ayx.Compiled import pyxdb, pyxdbLookupFieldTypeEnum
+  File "C:\Users\Sankalp Chauhan\Desktop\Sonny\InternFall2020\pythontool-ayx-package-master\pythontool-ayx-package-master\ayx\Compiled.py", line 6, in <module>
+    import PyYXDBReader as pyxdb
+ModuleNotFoundError: No module named 'PyYXDBReader'
+
+    
